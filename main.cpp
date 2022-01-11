@@ -9,8 +9,8 @@
 
 int main() {
 
-    const int N = 30;
-    const double dt = 0.2;
+    const int N = 25;
+    const double dt = 0.3;
     const double v_max = 10.0;
     const double a_max = 1.0;
     const double a_min = -1.0;
@@ -18,17 +18,16 @@ int main() {
     const double j_min = -1.0;
     const double s0 = 0.0;
     const double v0 = 5.0;
-    const double a0 = -1.0;
-    const double j0 = 0.0;
+    const double a0 = 0.0;
 
     SBoundaries s_boundaries(N);
-    for(size_t i=0; i<21; ++i) {
-        s_boundaries.at(i).max_s = 12.0;
+    for(size_t i=0; i<7; ++i) {
+        s_boundaries.at(i).max_s = 8.5;
     }
-    for(size_t i=21; i<25; ++i) {
+    for(size_t i=7; i<16; ++i) {
         s_boundaries.at(i).max_s = 15.0;
     }
-    for(size_t i=25; i<N; ++i) {
+    for(size_t i=16; i<N; ++i) {
         s_boundaries.at(i).max_s = 25.0;
     }
 
@@ -53,7 +52,7 @@ int main() {
     const int IDX_GAMMA0 = 5*N;
     const int IDX_DELTA0 = 6*N;
     const int l_variables = 7*N;
-    const int l_constraints = 4*N + 3 * (N-1) + 4;
+    const int l_constraints = 4*N + 3 * (N-1) + 3;
 
     // Start
     const auto ts = std::chrono::system_clock::now();
@@ -160,11 +159,6 @@ int main() {
         A(constr_idx, IDX_A0) = 1.0;  // a0
         upper_bound[constr_idx] = a0;
         lower_bound[constr_idx] = a0;
-        ++constr_idx;
-
-        A(constr_idx, IDX_J0) = 1.0;  // j0
-        upper_bound[constr_idx] = j0;
-        lower_bound[constr_idx] = j0;
     }
 
     // execute optimization
