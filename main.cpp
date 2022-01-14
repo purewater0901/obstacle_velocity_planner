@@ -15,15 +15,15 @@ int main() {
 
     const int N = 50;
     const double dt = 0.2;
-    const double ds = 0.1;
+    const double ds = 0.5;
     const double v_max = 10.0;
     const double a_max = 1.0;
     const double a_min = -1.0;
     const double j_max = 1.0;
     const double j_min = -1.0;
     const double s0 = 0.0;
-    const double v0 = 5.0;
-    const double a0 = 0.0;
+    const double v0 = 1.0;
+    const double a0 = 0.1;
     const double over_v_weight = 1000.0;
     const double over_a_weight = 1000.0;
     const double over_j_weight = 1000.0;
@@ -34,13 +34,13 @@ int main() {
 
     SBoundaries s_boundaries(N);
     for(size_t i=0; i<7; ++i) {
-        s_boundaries.at(i).max_s = 8.5;
+        s_boundaries.at(i).max_s = 100.0;
     }
     for(size_t i=7; i<16; ++i) {
-        s_boundaries.at(i).max_s = 15.0;
+        s_boundaries.at(i).max_s = 100.0;
     }
     for(size_t i=16; i<N; ++i) {
-        s_boundaries.at(i).max_s = 25.0;
+        s_boundaries.at(i).max_s = 100.0;
     }
 
     std::vector<double> s_lim(N);
@@ -100,16 +100,22 @@ int main() {
             interpolation::lerp(opt_positions, opt_velocity, query_positions);
     resampled_opt_velocity.back() = 0.0;
 
-
     /*
      * Velocity Smoother
      */
-    const double jerk_weight = 10.0;
-    const auto velocity_smoother_ptr_ = std::make_shared<VelocitySmoother>(over_v_weight, over_a_weight, over_j_weight, jerk_weight);
+    const double over_v_weight_smoother = 10000.0;
+    const double over_a_weight_smoother = 500.0;
+    const double over_j_weight_smoother = 200.0;
+    const double jerk_weight = 0.0;
+    const auto velocity_smoother_ptr_ = std::make_shared<VelocitySmoother>(over_v_weight_smoother, over_a_weight_smoother, over_j_weight_smoother, jerk_weight);
+
+    std::vector<double> tmp_max_vels(resampled_opt_velocity.size(), 8.0);
+    tmp_max_vels.back() = 0.0;
 
     VelocitySmoother::OptimizationData smoother_data_forward;
     smoother_data_forward.s = query_positions;
     smoother_data_forward.v_max = resampled_opt_velocity;
+    //smoother_data_forward.v_max = tmp_max_vels;
     smoother_data_forward.v0 = v0;
     smoother_data_forward.a0 = a0;
     smoother_data_forward.a_max = a_max;
@@ -126,12 +132,23 @@ int main() {
     smoother_data_backward.a0 = 0.0;
     const auto backward_filtered_vel = velocity_smoother_ptr_->backwardJerkFilter(smoother_data_forward, a_stop_decel);
 
+    const auto merged_filtered_vel = velocity_smoother_ptr_->mergeFilteredTrajectory(smoother_data_forward, forward_filtered_vel, backward_filtered_vel);
+
+    VelocitySmoother::OptimizationData smoother_data = smoother_data_forward;
+    smoother_data.v_max = merged_filtered_vel;
+    const auto smoothed_result = velocity_smoother_ptr_->optimize(smoother_data, a_stop_decel);
+
+    std::cout << "Finish Optimization" << std::endl;
+
     // Visualization
     std::vector<double> max_vels(N, v_max);
     matplotlibcpp::figure_size(1200, 700);
     matplotlibcpp::named_plot("optimal_velocity", query_positions, resampled_opt_velocity);
     matplotlibcpp::named_plot("forward_velocity", query_positions, forward_filtered_vel);
     matplotlibcpp::named_plot("backward_velocity", query_positions, backward_filtered_vel);
+    matplotlibcpp::named_plot("merged_velocity", query_positions, merged_filtered_vel);
+    matplotlibcpp::named_plot("smoothed_velocity", query_positions, smoothed_result.v);
+    matplotlibcpp::named_plot("smoothed_acceleration", query_positions, smoothed_result.j);
     matplotlibcpp::named_plot("maximum_velocity", optimized_result.s, max_vels);
     //matplotlibcpp::named_plot("trajectory", optimized_result.t, optimized_result.s);
     //matplotlibcpp::named_plot("obstacle", optimized_result.t, s_lim);
