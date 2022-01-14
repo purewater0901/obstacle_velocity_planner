@@ -16,6 +16,12 @@ find_package(osqp REQUIRED)
 include_directories(include)
 include_directories(${Boost_INCLUDE_DIR})
 
-add_executable(obstacle_velocity_planner main.cpp src/csc_matrix_conv.cpp src/osqp_interface.cpp src/velocity_optimizer.cpp)
+add_executable(obstacle_velocity_planner main.cpp
+                                         src/interpolation/linear_interpolation.cpp
+                                         src/interpolation/spline_interpolation.cpp
+                                         src/csc_matrix_conv.cpp
+                                         src/osqp_interface.cpp
+                                         src/velocity_optimizer.cpp
+                                         src/velocity_smoother.cpp)
 target_include_directories(obstacle_velocity_planner PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 target_link_libraries(obstacle_velocity_planner Python3::Python Python3::NumPy osqp::osqp)

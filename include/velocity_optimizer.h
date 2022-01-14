@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <vector>
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Core>
 
 #include "SBoundary.h"
 #include "osqp_interface.h"
