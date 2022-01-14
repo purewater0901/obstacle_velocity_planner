@@ -8,11 +8,14 @@
 #include "osqp_interface.h"
 #include "SBoundary.h"
 #include "velocity_optimizer.h"
+#include "velocity_smoother.h"
+#include "interpolation/linear_interpolation.h"
 
 int main() {
 
-    const int N = 25;
-    const double dt = 0.3;
+    const int N = 50;
+    const double dt = 0.2;
+    const double ds = 0.1;
     const double v_max = 10.0;
     const double a_max = 1.0;
     const double a_min = -1.0;
@@ -69,12 +72,69 @@ int main() {
 
     std::cout << "Optimization Time: " << calculation_time << "[ms]" << std::endl;
 
+    // Transformation from t to s
+    std::vector<double> opt_positions = {0.0};
+    std::vector<double> opt_velocity = {v0};
+    for (size_t i = 1; i < optimized_result.s.size(); ++i) {
+        const double prev_s = opt_positions.back();
+        const double current_s = std::max(optimized_result.s.at(i), 0.0);
+        const double current_v = std::max(optimized_result.v.at(i), 0.0);
+        if (prev_s >= current_s) {
+            continue;
+        }
+        opt_positions.push_back(current_s);
+        opt_velocity.push_back(current_v);
+    }
+
+    if (opt_positions.size() == 1) {
+        std::cout << "[Velocity Optimizer Result]: Optimized Trajectory is too small" << std::endl;
+        return -1;
+    }
+
+    std::cout << "[Velocity Optimizer Result]: Trajectory Length: " << opt_positions.back() << std::endl;
+    std::vector<double> query_positions;
+    for (double s = 0; s <= opt_positions.back(); s+=ds) {
+        query_positions.push_back(s);
+    }
+    auto resampled_opt_velocity =
+            interpolation::lerp(opt_positions, opt_velocity, query_positions);
+    resampled_opt_velocity.back() = 0.0;
+
+
+    /*
+     * Velocity Smoother
+     */
+    const double jerk_weight = 10.0;
+    const auto velocity_smoother_ptr_ = std::make_shared<VelocitySmoother>(over_v_weight, over_a_weight, over_j_weight, jerk_weight);
+
+    VelocitySmoother::OptimizationData smoother_data_forward;
+    smoother_data_forward.s = query_positions;
+    smoother_data_forward.v_max = resampled_opt_velocity;
+    smoother_data_forward.v0 = v0;
+    smoother_data_forward.a0 = a0;
+    smoother_data_forward.a_max = a_max;
+    smoother_data_forward.a_min = a_min;
+    smoother_data_forward.j_max = j_max;
+    smoother_data_forward.j_min = j_min;
+    const double a_stop_accel = 0.0;
+    const double a_stop_decel = 0.0;
+
+    const auto forward_filtered_vel = velocity_smoother_ptr_->forwardJerkFilter(smoother_data_forward, a_stop_accel);
+
+    VelocitySmoother::OptimizationData smoother_data_backward = smoother_data_forward;
+    smoother_data_backward.v0 = 0.0;
+    smoother_data_backward.a0 = 0.0;
+    const auto backward_filtered_vel = velocity_smoother_ptr_->backwardJerkFilter(smoother_data_forward, a_stop_decel);
+
+    // Visualization
     std::vector<double> max_vels(N, v_max);
     matplotlibcpp::figure_size(1200, 700);
-    // matplotlibcpp::named_plot("optimal_velocity", opt_pos, opt_vel);
-    // matplotlibcpp::named_plot("maximum_velocity", opt_pos, max_vels);
-    matplotlibcpp::named_plot("trajectory", optimized_result.t, optimized_result.s);
-    matplotlibcpp::named_plot("obstacle", optimized_result.t, s_lim);
+    matplotlibcpp::named_plot("optimal_velocity", query_positions, resampled_opt_velocity);
+    matplotlibcpp::named_plot("forward_velocity", query_positions, forward_filtered_vel);
+    matplotlibcpp::named_plot("backward_velocity", query_positions, backward_filtered_vel);
+    matplotlibcpp::named_plot("maximum_velocity", optimized_result.s, max_vels);
+    //matplotlibcpp::named_plot("trajectory", optimized_result.t, optimized_result.s);
+    //matplotlibcpp::named_plot("obstacle", optimized_result.t, s_lim);
     matplotlibcpp::title("Result");
     matplotlibcpp::legend();
     matplotlibcpp::show();
