@@ -22,8 +22,8 @@ int main() {
     const double j_max = 1.0;
     const double j_min = -1.0;
     const double s0 = 0.0;
-    const double v0 = 1.0;
-    const double a0 = 0.1;
+    const double v0 = 0.1;
+    const double a0 = 0.0;
     const double over_v_weight = 1000.0;
     const double over_a_weight = 1000.0;
     const double over_j_weight = 1000.0;
@@ -34,13 +34,13 @@ int main() {
 
     SBoundaries s_boundaries(N);
     for(size_t i=0; i<7; ++i) {
-        s_boundaries.at(i).max_s = 100.0;
+        s_boundaries.at(i).max_s = 0.0;
     }
     for(size_t i=7; i<16; ++i) {
-        s_boundaries.at(i).max_s = 100.0;
+        s_boundaries.at(i).max_s = 0.0;
     }
     for(size_t i=16; i<N; ++i) {
-        s_boundaries.at(i).max_s = 100.0;
+        s_boundaries.at(i).max_s = 0.0;
     }
 
     std::vector<double> s_lim(N);
@@ -52,7 +52,7 @@ int main() {
     data.N = N;
     data.dt = dt;
     data.s0 = 0.0;
-    data.v0 = v0;
+    data.v0 = v0 + 0.1;
     data.a0 = a0;
     data.v_max = v_max;
     data.a_max = a_max;
@@ -74,7 +74,7 @@ int main() {
 
     // Transformation from t to s
     std::vector<double> opt_positions = {0.0};
-    std::vector<double> opt_velocity = {v0};
+    std::vector<double> opt_velocity = {data.v0};
     for (size_t i = 1; i < optimized_result.s.size(); ++i) {
         const double prev_s = opt_positions.back();
         const double current_s = std::max(optimized_result.s.at(i), 0.0);
@@ -136,25 +136,34 @@ int main() {
 
     VelocitySmoother::OptimizationData smoother_data = smoother_data_forward;
     smoother_data.v_max = merged_filtered_vel;
+    /*
     const auto smoothed_result = velocity_smoother_ptr_->optimize(smoother_data, a_stop_decel);
+    const auto l2_smoothed_result = velocity_smoother_ptr_->optimizeL2(smoother_data, a_stop_decel);
+     */
 
     std::cout << "Finish Optimization" << std::endl;
 
     // Visualization
     std::vector<double> max_vels(N, v_max);
     matplotlibcpp::figure_size(1200, 700);
+    matplotlibcpp::named_plot("trajectory", optimized_result.t, optimized_result.s);
+    matplotlibcpp::named_plot("obstacle", optimized_result.t, s_lim);
+    matplotlibcpp::title("Result");
+    matplotlibcpp::legend();
+    matplotlibcpp::show();
+    /*
+    matplotlibcpp::named_plot("maximum_velocity", optimized_result.s, max_vels);
     matplotlibcpp::named_plot("optimal_velocity", query_positions, resampled_opt_velocity);
     matplotlibcpp::named_plot("forward_velocity", query_positions, forward_filtered_vel);
     matplotlibcpp::named_plot("backward_velocity", query_positions, backward_filtered_vel);
     matplotlibcpp::named_plot("merged_velocity", query_positions, merged_filtered_vel);
     matplotlibcpp::named_plot("smoothed_velocity", query_positions, smoothed_result.v);
-    matplotlibcpp::named_plot("smoothed_acceleration", query_positions, smoothed_result.j);
-    matplotlibcpp::named_plot("maximum_velocity", optimized_result.s, max_vels);
-    //matplotlibcpp::named_plot("trajectory", optimized_result.t, optimized_result.s);
-    //matplotlibcpp::named_plot("obstacle", optimized_result.t, s_lim);
-    matplotlibcpp::title("Result");
-    matplotlibcpp::legend();
-    matplotlibcpp::show();
+    matplotlibcpp::named_plot("smoothed_acceleration", query_positions, smoothed_result.a);
+    matplotlibcpp::named_plot("smoothed_jerk", query_positions, smoothed_result.j);
+    matplotlibcpp::named_plot("l2_smoothed_velocity", query_positions, l2_smoothed_result.v);
+    matplotlibcpp::named_plot("l2_smoothed_acceleration", query_positions, l2_smoothed_result.a);
+    matplotlibcpp::named_plot("l2_smoothed_jerk", query_positions, l2_smoothed_result.j);
+    */
 
     return 0;
 }

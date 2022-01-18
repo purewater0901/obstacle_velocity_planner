@@ -38,6 +38,7 @@ public:
     VelocityOptimizer(const double over_v_weight, const double over_a_weight, const double over_j_weight);
 
     OptimizationResult optimize(const OptimizationData & data);
+    OptimizationResult optimizeWithoutJerk(const OptimizationData & data);
 
 private:
     double over_v_weight_;

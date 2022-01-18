@@ -34,6 +34,7 @@ public:
     VelocitySmoother(const double over_v_weight, const double over_a_weight, const double over_j_weight, const double jerk_weight);
 
     OptimizationResult optimize(const OptimizationData & data, const double a_stop_decel);
+    OptimizationResult optimizeL2(const OptimizationData & data, const double a_stop_decel);
 
     std::vector<double> forwardJerkFilter(const OptimizationData & data, const double a_start);
     std::vector<double> backwardJerkFilter(const OptimizationData & data, const double a_stop);
