@@ -22,25 +22,27 @@ int main() {
     const double j_max = 1.0;
     const double j_min = -1.0;
     const double s0 = 0.0;
-    const double v0 = 0.1;
+    const double v0 = 5.0;
     const double a0 = 0.0;
+    const double max_s_weight = 1000.0;
+    const double max_v_weight = 100000.0;
+    const double over_s_weight = 1000000.0;
     const double over_v_weight = 1000.0;
     const double over_a_weight = 1000.0;
     const double over_j_weight = 1000.0;
 
     std::shared_ptr<VelocityOptimizer> velocity_optimizer_ptr_;
     velocity_optimizer_ptr_ =
-            std::make_shared<VelocityOptimizer>(over_v_weight, over_a_weight, over_j_weight);
+            std::make_shared<VelocityOptimizer>(max_s_weight, max_v_weight, over_s_weight, over_v_weight, over_a_weight, over_j_weight);
 
     SBoundaries s_boundaries(N);
-    for(size_t i=0; i<7; ++i) {
-        s_boundaries.at(i).max_s = 0.0;
+    const double s_start = 30.0;
+    const double v_obj = 4.0;
+    for(size_t i=0; i<20; ++i) {
+        s_boundaries.at(i).max_s = s_start;
     }
-    for(size_t i=7; i<16; ++i) {
-        s_boundaries.at(i).max_s = 0.0;
-    }
-    for(size_t i=16; i<N; ++i) {
-        s_boundaries.at(i).max_s = 0.0;
+    for(size_t i=20; i<50; ++i) {
+        s_boundaries.at(i).max_s = s_start + v_obj * (i - 20);
     }
 
     std::vector<double> s_lim(N);
@@ -52,7 +54,7 @@ int main() {
     data.N = N;
     data.dt = dt;
     data.s0 = 0.0;
-    data.v0 = v0 + 0.1;
+    data.v0 = v0;// + 0.1;
     data.a0 = a0;
     data.v_max = v_max;
     data.a_max = a_max;

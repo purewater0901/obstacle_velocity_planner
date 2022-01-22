@@ -1,9 +1,12 @@
 #include "velocity_optimizer.h"
 
-VelocityOptimizer::VelocityOptimizer(const double over_v_weight,
-                                     const double over_a_weight,
-                                     const double over_j_weight)
-                                     : over_v_weight_(over_v_weight),
+VelocityOptimizer::VelocityOptimizer(const double max_s_weight, const double max_v_weight,
+                                     const double over_s_weight, const double over_v_weight,
+                                     const double over_a_weight, const double over_j_weight)
+                                     : max_s_weight_(max_s_weight),
+                                       max_v_weight_(max_v_weight),
+                                       over_s_weight_(over_s_weight),
+                                       over_v_weight_(over_v_weight),
                                        over_a_weight_(over_a_weight),
                                        over_j_weight_(over_j_weight)
 {
@@ -53,15 +56,19 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
     // Object Function
     // max v_i  -> min - v_i * dt
     for (size_t i = 0; i < N; ++i) {
-        q.at(IDX_S0 + i) = -1.0;
+        q.at(IDX_S0 + i) = -2.0 * s_boundaries.at(i).max_s * max_s_weight_;
+        q.at(IDX_V0 + i) = -2.0 * v_max * max_v_weight_;
     }
 
     // min sigma_i^2 * dt + gamma_i^2 * dt + delta_i^2 * dt
     for (size_t i = 0; i < N; ++i) {
+        P(IDX_OMEGA0 + i, IDX_OMEGA0 + i) += over_s_weight_;
         P(IDX_SIGMA0 + i, IDX_SIGMA0 + i) += over_v_weight_;
         P(IDX_GAMMA0 + i, IDX_GAMMA0 + i) += over_a_weight_;
         P(IDX_DELTA0 + i, IDX_DELTA0 + i) += over_j_weight_;
-        P(IDX_OMEGA0 + i, IDX_OMEGA0 + i) += 10000000.0;
+
+        P(IDX_S0+ i, IDX_S0+ i) += max_s_weight_;
+        P(IDX_V0+ i, IDX_V0+ i) += max_v_weight_;
     }
 
     // Constraint

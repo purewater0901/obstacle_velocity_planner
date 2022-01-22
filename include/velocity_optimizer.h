@@ -35,12 +35,17 @@ public:
         std::vector<double> j;
     };
 
-    VelocityOptimizer(const double over_v_weight, const double over_a_weight, const double over_j_weight);
+    VelocityOptimizer(const double max_s_weight, const double max_v_weight,
+                      const double over_s_weight, const double over_v_weight,
+                      const double over_a_weight, const double over_j_weight);
 
     OptimizationResult optimize(const OptimizationData & data);
     OptimizationResult optimizeWithoutJerk(const OptimizationData & data);
 
 private:
+    double max_s_weight_;
+    double max_v_weight_;
+    double over_s_weight_;
     double over_v_weight_;
     double over_a_weight_;
     double over_j_weight_;
