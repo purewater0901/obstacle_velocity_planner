@@ -4,6 +4,7 @@
 #include <array>
 #include <stdexcept>
 #include <vector>
+#include <string>
 
 namespace interpolation_utils
 {

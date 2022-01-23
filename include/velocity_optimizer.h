@@ -23,7 +23,8 @@ public:
         double a_min;
         double j_max;
         double j_min;
-        SBoundaries s_boundaries;
+        SBoundaries s_safety;
+        SBoundaries s_ideal;
     };
 
     struct OptimizationResult
@@ -36,16 +37,17 @@ public:
     };
 
     VelocityOptimizer(const double max_s_weight, const double max_v_weight,
-                      const double over_s_weight, const double over_v_weight,
+                      const double over_s_safety_weight, const double over_s_ideal_weight,
+                      const double over_v_weight,
                       const double over_a_weight, const double over_j_weight);
 
     OptimizationResult optimize(const OptimizationData & data);
-    OptimizationResult optimizeWithoutJerk(const OptimizationData & data);
 
 private:
     double max_s_weight_;
     double max_v_weight_;
-    double over_s_weight_;
+    double over_s_safety_weight_;
+    double over_s_ideal_weight_;
     double over_v_weight_;
     double over_a_weight_;
     double over_j_weight_;
