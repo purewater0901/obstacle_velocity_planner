@@ -24,10 +24,9 @@ int main() {
     const double s0 = 0.0;
     const double v0 = 6.0;
     const double a0 = 0.0;
-    const double t_idling = 0.5;
-    const double min_s_bound = 0.0;
+    const double t_idling = 1.0;
     const double max_s_weight = 500.0;
-    const double max_v_weight = 500.0;
+    const double max_v_weight = 1000.0;
     const double over_s_safety_weight = 1000000.0;
     const double over_s_ideal_weight = 800.0;
     const double over_v_weight = 100000.0;
@@ -39,26 +38,42 @@ int main() {
             std::make_shared<VelocityOptimizer>(max_s_weight, max_v_weight, over_s_safety_weight, over_s_ideal_weight,
                                                 over_v_weight, over_a_weight, over_j_weight);
 
+    // Compute lower s bound
+    const double t_jerk = std::max((a_min - a0) / j_min, 0.0);
+    const double t_decel = std::max((-a0 + std::sqrt(a0*a0-2*j_min*v0))/j_min, 0.0);
+    const double t_need = t_jerk + t_decel;
+    const double s_need = std::max(v0*t_need + 0.5*a0*t_need*t_need + (1.0/6.0)*j_min*t_need*t_need*t_need, 0.0);
+
     SBoundaries s_safety(N);
     SBoundaries s_ideal(N);
     const double s_start = 10.0;
     const double v_obj = 4.0;
-    const double delta_s = 5.0; //std::max(v0 * t_idling + (v0*v0)/(2*std::fabs(a_min)) - (v_obj*v_obj) / (2*std::fabs(a_min)), 0.0);
+    const double delta_s = std::max(v0 * t_idling + (v0*v0)/(2*std::fabs(a_min)) - (v_obj*v_obj) / (2*std::fabs(a_min)), 0.0);
     for(size_t i=0; i<N; ++i) {
         s_safety.at(i).max_s = s0 + v_max * i * dt;
         s_ideal.at(i).max_s = s_safety.at(i).max_s;
     }
-    for(size_t i=0; i<1; ++i) {
+    for(size_t i=0; i<0; ++i) {
         s_safety.at(i).max_s = s_start;
-        s_ideal.at(i).max_s = std::max(s_safety.at(i).max_s - delta_s, min_s_bound);
+        s_ideal.at(i).max_s = s_safety.at(i).max_s - delta_s;
     }
-    for(size_t i=1; i<30; ++i) {
+    for(size_t i=0; i<30; ++i) {
         s_safety.at(i).max_s = s_start + v_obj * (i - 0) * dt;
-        s_ideal.at(i).max_s = std::max(s_safety.at(i).max_s - delta_s, min_s_bound);
+        const double ideal_pos = s_safety.at(i).max_s - delta_s;
+        if(ideal_pos < s_need) {
+            s_ideal.at(i).max_s = s_safety.at(i).max_s;
+        } else {
+            s_ideal.at(i).max_s = ideal_pos;
+        }
     }
     for(size_t i=30; i<N; ++i) {
         s_safety.at(i).max_s = s_safety.at(29).max_s + v_max * (i - 29) * dt;
-        s_ideal.at(i).max_s = std::max(s_safety.at(i).max_s - delta_s, min_s_bound);
+        const double ideal_pos = s_safety.at(i).max_s - delta_s;
+        if(ideal_pos < s_need) {
+            s_ideal.at(i).max_s = s_safety.at(i).max_s;
+        } else {
+            s_ideal.at(i).max_s = ideal_pos;
+        }
     }
 
     std::vector<double> s_safety_bound(N);
