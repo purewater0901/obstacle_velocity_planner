@@ -32,8 +32,9 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
     const double a_min = data.a_min;
     const double j_max = data.j_max;
     const double j_min = data.j_min;
+    const double t_dangerous = data.t_dangerous;
+    const double t_idling = data.t_idling;
     const auto s_safety = data.s_safety;
-    const auto s_ideal = data.s_ideal;
 
     // Variables: s_i, v_i, a_i, j_i, over_s_safety_i, over_s_ideal_i, over_v_i, over_a_i, over_j_i
     const int IDX_S0 = 0;
@@ -62,7 +63,13 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
     // + over_s_safety^2 + over_s_ideal^2 + over_v_ideal^2 + over_a_ideal^2
     // + over_j_ideal^2
     for (size_t i = 0; i < N; ++i) {
-        q.at(IDX_S0 + i) += -s_ideal.at(i).max_s * max_s_weight_;
+        if(s_safety.at(i).is_object) {
+            q.at(IDX_S0 + i) += -s_safety.at(i).max_s * max_s_weight_;
+            q.at(IDX_V0 + i) += -s_safety.at(i).max_s * t_idling * max_s_weight_;
+        } else {
+            q.at(IDX_S0 + i) += -s_safety.at(i).max_s * max_s_weight_;
+        }
+
         q.at(IDX_V0 + i) += -v_max * max_v_weight_;
     }
 
@@ -73,27 +80,41 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
         P(IDX_OVER_A0 + i, IDX_OVER_A0 + i) += over_a_weight_;
         P(IDX_OVER_J0 + i, IDX_OVER_J0 + i) += over_j_weight_;
 
-        P(IDX_S0+ i, IDX_S0+ i) += max_s_weight_;
+        if(s_safety.at(i).is_object){
+            P(IDX_S0+ i, IDX_S0+ i) += max_s_weight_;
+            P(IDX_V0+ i, IDX_V0+ i) += max_s_weight_ * t_idling;
+            P(IDX_S0+ i, IDX_V0+ i) += max_s_weight_ * t_idling;
+            P(IDX_V0+ i, IDX_S0+ i) += max_s_weight_ * t_idling;
+        } else {
+            P(IDX_S0+ i, IDX_S0+ i) += max_s_weight_;
+        }
+
         P(IDX_V0+ i, IDX_V0+ i) += max_v_weight_;
     }
 
     // Constraint
     size_t constr_idx = 0;
 
-    // Safety Position Constraint: s_safety_min < s_i - over_s_safety_i < s_safety_max
+    // Safety Position Constraint: s_safety_min < s_i + v_i*t_dangerous - over_s_safety_i < s_safety_max
     for (size_t i = 0; i < N; ++i, ++constr_idx) {
         A(constr_idx, IDX_S0 + i) = 1.0;  // s_i
+        if(s_safety.at(i).is_object) {
+            A(constr_idx, IDX_V0 + i) = t_dangerous;  // v_i * t_dangerous
+        }
         A(constr_idx, IDX_OVER_S_SAFETY0 + i) = -1.0;  // over_s_safety_i
         upper_bound.at(constr_idx) = s_safety.at(i).max_s;
-        lower_bound.at(constr_idx) = s_safety.at(i).min_s;
+        lower_bound.at(constr_idx) = 0.0;
     }
 
-    // Ideal Position Constraint: s_ideal_min < s_i - over_s_ideal_i < s_ideal_max
+    // Ideal Position Constraint: s_ideal_min < s_i  + v_i * t_idling - over_s_ideal_i < s_ideal_max
     for (size_t i = 0; i < N; ++i, ++constr_idx) {
         A(constr_idx, IDX_S0 + i) = 1.0;  // s_i
+        if(s_safety.at(i).is_object) {
+            A(constr_idx, IDX_V0 + i) = t_idling;  // v_i * t_idling
+        }
         A(constr_idx, IDX_OVER_S_IDEAL0 + i) = -1.0;  // over_s_ideal_i
-        upper_bound.at(constr_idx) = s_ideal.at(i).max_s;
-        lower_bound.at(constr_idx) = s_ideal.at(i).min_s;
+        upper_bound.at(constr_idx) = s_safety.at(i).max_s;
+        lower_bound.at(constr_idx) = 0.0;
     }
 
     // Soft Velocity Constraint: 0 < v_i - over_v_i < v_max

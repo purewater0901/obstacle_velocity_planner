@@ -12,6 +12,7 @@ public:
 
     double max_s = std::numeric_limits<double>::max();
     double min_s = 0.0;
+    bool is_object = false;
 };
 
 using SBoundaries = std::vector<SBoundary>;
