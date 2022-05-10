@@ -21,11 +21,12 @@ public:
         double v_max;
         double a_max;
         double a_min;
+        double limit_a_min;
         double j_max;
         double j_min;
         double t_dangerous;
         double t_idling;
-        SBoundaries s_safety;
+        SBoundaries s_boundary;
     };
 
     struct OptimizationResult

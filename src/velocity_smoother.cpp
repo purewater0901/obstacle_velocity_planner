@@ -97,7 +97,7 @@ std::vector<double> VelocitySmoother::mergeFilteredTrajectory(const Optimization
     if (getVx(backward_filtered, 0) < v0) {
         double current_vel = v0;
         double current_acc = a0;
-        while (getVx(backward_filtered, i) < current_vel && current_vel <= getVx(forward_filtered, i) &&
+        while (getVx(backward_filtered, i) < current_vel &&
                i < merged.size() - 1) {
             merged.at(i) = current_vel;
 
@@ -113,6 +113,9 @@ std::vector<double> VelocitySmoother::mergeFilteredTrajectory(const Optimization
             } else {
                 current_vel = current_vel + current_acc * dt + 0.5 * j_min * dt * dt;
                 current_acc = current_acc + j_min * dt;
+            }
+            if(current_vel >= getVx(forward_filtered, i)) {
+                current_vel = getVx(forward_filtered, i);
             }
             ++i;
         }
@@ -197,14 +200,29 @@ VelocitySmoother::OptimizationResult VelocitySmoother::optimize(const Optimizati
 
     for (size_t i = 0; i < N; ++i) {
         const double v_max = std::max(v_max_arr.at(i), 0.1);
-        q.at(IDX_B0 + i) =
-                -1.0 / (v_max * v_max);  // |v_max_i^2 - b_i|/v_max^2 -> minimize (-bi) * ds / v_max^2
+        q.at(IDX_B0 + i)  = -1.0 / (v_max * v_max); // |v_max_i^2 - b_i|/v_max^2 -> minimize (-bi) * ds / v_max^2
         if (i < N - 1) {
             q.at(IDX_B0 + i) *= std::max(interval_dist_arr.at(i), 0.0001);
         }
+
+        /*
+        P(IDX_B0 + i, IDX_B0 + i) += 1.0/(v_max*v_max*v_max*v_max);
+        q.at(IDX_B0 + i) = -1.0 / (v_max*v_max);  // (v_max_i^2 - b_i)^2/v_max^2 -> minimize (v_max_i^2 - b_i)^2 * ds / v_max^2
+        if (i < N - 1)
+        {
+            q.at(IDX_B0 + i) *= std::max(interval_dist_arr.at(i), 0.0001);
+            P(IDX_B0 + i, IDX_B0 + i) *= std::max(interval_dist_arr.at(i), 0.0001);
+        }
+        */
+
         P(IDX_DELTA0 + i, IDX_DELTA0 + i) += over_v_weight_;  // over velocity cost
         P(IDX_SIGMA0 + i, IDX_SIGMA0 + i) += over_a_weight_;  // over acceleration cost
         P(IDX_GAMMA0 + i, IDX_GAMMA0 + i) += over_j_weight_;  // over jerk cost
+        if(i < N-1) {
+            P(IDX_DELTA0 + i, IDX_DELTA0 + i) *= interval_dist_arr.at(i);  // over velocity cost
+            P(IDX_SIGMA0 + i, IDX_SIGMA0 + i) *= interval_dist_arr.at(i);  // over acceleration cost
+            P(IDX_GAMMA0 + i, IDX_GAMMA0 + i) *= interval_dist_arr.at(i);  // over jerk cost
+        }
     }
 
     /**************************************************************/
