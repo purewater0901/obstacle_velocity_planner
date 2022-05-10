@@ -24,6 +24,8 @@ public:
         double limit_a_min;
         double j_max;
         double j_min;
+        double lim_j_max;
+        double lim_j_min;
         double t_dangerous;
         double t_idling;
         SBoundaries s_boundary;

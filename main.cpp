@@ -22,18 +22,20 @@ int main() {
     const double limit_a_min = -3.0;
     const double j_max = 1.0;
     const double j_min = -1.0;
+    const double lim_j_max = 1.5;
+    const double lim_j_min = -1.5;
     const double s0 = 0.0;
     const double v0 = 3.0;
     const double a0 = 0.0;
     const double t_dangerous = 1.0;
     const double t_idling = 2.0;
-    const double max_s_weight = 100.0;
-    const double max_v_weight = 1.0;
-    const double over_s_safety_weight = 1000000.0;
-    const double over_s_ideal_weight = 50.0;
-    const double over_v_weight = 500000.0;
-    const double over_a_weight = 5000.0;
-    const double over_j_weight = 10000.0;
+    const double max_s_weight = 10.0;
+    const double max_v_weight = 0.1;
+    const double over_s_safety_weight = 100000.0;
+    const double over_s_ideal_weight = 5.0;
+    const double over_v_weight = 50000.0;
+    const double over_a_weight = 500.0;
+    const double over_j_weight = 1000.0;
 
     std::shared_ptr<VelocityOptimizer> velocity_optimizer_ptr_;
     velocity_optimizer_ptr_ =
@@ -41,11 +43,11 @@ int main() {
                                                 over_v_weight, over_a_weight, over_j_weight);
 
     SBoundaries s_boundary(N);
-    const double s_start = 6.0;
+    const double s_start = 9.9;
     const double v_obj = 0.0;
     const double s_max = 100; //s0 + v_max * (N-1) * dt;
     for(size_t i=0; i<N; ++i) {
-        s_boundary.at(i).max_s = s_max;
+        s_boundary.at(i).max_s = s_start;
     }
     for(size_t i=10; i<20; ++i) {
         s_boundary.at(i).max_s = s_start + v_obj * (i - 10) * dt;
@@ -73,6 +75,8 @@ int main() {
     data.limit_a_min = limit_a_min;
     data.j_max = j_max;
     data.j_min = j_min;
+    data.lim_j_max = lim_j_max;
+    data.lim_j_min = lim_j_min;
     data.t_dangerous = t_dangerous;
     data.t_idling = t_idling;
     data.s_boundary = s_boundary;

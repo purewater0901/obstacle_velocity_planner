@@ -33,6 +33,8 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
     const double limit_a_min = data.limit_a_min;
     const double j_max = data.j_max;
     const double j_min = data.j_min;
+    const double lim_j_max = data.lim_j_max;
+    const double lim_j_min = data.lim_j_min;
     const double a_range = std::max(a_max - a_min, 0.1);
     const double j_range = std::max(j_max - j_min, 0.1);
     const double t_dangerous = data.t_dangerous;
@@ -56,7 +58,7 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
     const int IDX_OVER_A0 = 7 * N;
     const int IDX_OVER_J0 = 8 * N;
     const int l_variables = 9 * N;
-    const int l_constraints = 6 * N + 3 * (N - 1) + 3;
+    const int l_constraints = 7 * N + 3 * (N - 1) + 3;
 
     // the matrix size depends on constraint numbers.
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(l_constraints, l_variables);
@@ -169,6 +171,13 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
         A(constr_idx, IDX_OVER_J0 + i) = -1.0;  // over_j_i
         upper_bound.at(constr_idx) = i == N - 1 ? 0.0 : j_max;
         lower_bound.at(constr_idx) = i == N - 1 ? 0.0 : j_min;
+    }
+
+    // Hard Jerk Constraint lim_j_min < j_i < lim_j_max
+    for (size_t i = 0; i < N; ++i, ++constr_idx) {
+        A(constr_idx, IDX_J0 + i) = 1.0;  // j_i
+        upper_bound.at(constr_idx) = lim_j_max;
+        lower_bound.at(constr_idx) = lim_j_min;
     }
 
     // Dynamic Constraint
